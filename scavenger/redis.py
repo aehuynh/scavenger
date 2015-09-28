@@ -1,13 +1,27 @@
 import redis
 
 DOCUMENT_WORD_SCORE_NAME =  "doc_word_scores:"
+HOST = 'localhost'
+PORT = 6379
 
-# TODO: catch IO exceptions
+def create_index_cache(host, port):
+    params = {}
+    if host is not None:
+        params['host'] = host
+    else:
+        params['host'] = HOST
+
+    if port is not None:
+        params['port'] = port
+    else:
+        params['port'] = PORT
+
+    return IndexCache(**params)
 
 class IndexCache(object):
 
-    def __init__(self):
-        self.client = redis.StrictRedis(host='localhost', port=6379, db=0)
+    def __init__(self, host, port):
+        self.client = redis.StrictRedis(host=host, port=port, db=0)
 
 
     def build(self, doc_word_scores):

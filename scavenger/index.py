@@ -1,21 +1,22 @@
-from text_process import term_freq, clean_text
+from text_process import word_freq, clean_text
 from models import Document, DocumentWord
+from search import Searcher
+from redis import IndexCache, create_index_cache
+from sqlite import IndexStore, create_index_store
+
 from collections import defaultdict
 
+
 class Index(object):
-    '''
-    self.scoring_type
-    '''
-    def __init__(self, searcher, reader, writer):
-        self.searcher = searcher
-        self.reader = reader
-        self.writer = writer
 
-    def add(self, text, doc_id):
-        self.writer.add(text, doc_id)
+    def __init__(self, cache_host=None, cache_port=None, db_file_path=None,
+                 db_url=None):
+        cache = create_index_cache(host=cache_host, port=cache_port)
+        db = create_index_store(file_path=db_file_path, url=db_url)
 
-    def bulk_add(self, documents):
-        self.writer.bulk_add(documents)
+        self.reader = IndexReader(db, cache)
+        self.writer = IndexWriter(db, cache)
+        self.searcher = Searcher(self.reader)
 
     def search(self, query):
         return self.searcher.search(query)
@@ -31,64 +32,11 @@ class Index(object):
         # Push the new data into the cache
         self.writer.build_cache(self.reader.doc_word_scores)
 
+    def writer(self):
+        return self.writer
 
-class IndexWriter(object):
-
-    def __init__(self, db, cache):
-        self.buffer = IndexBuffer()
-        self.db = db
-        self.cache =cache
-
-    def add(self, text, doc_id):
-        # Convert text to dictionary of words mapping to their term frequency
-        tf = term_freq(clean_text(text))
-
-        # Get doc length by summing all term frequencies
-        doc_length = reduce(lambda x, y: x + y, tf.values())
-
-        self.buffer.add(create_document_words(tf, doc_id))
-        self.buffer.add([Document(doc_id, doc_length)])
-
-    def bulk_add(self, documents):
-        for text, document_id in documents:
-            self.add(text, document_id)
-
-    def delete(self, document_id):
-        doc_to_del = self.db.select_document(document_id)
-        doc_words_to_del = self.db.select_document_word(document_id)
-
-        self.buffer.delete(doc_to_del)
-        self.buffer.delete(doc_words_to_del)
-
-    def bulk_delete(self, document_ids):
-        for document_id in document_ids:
-            self.delete(document_id)
-
-    def commit(self):
-        # Flush buffer into the database
-        self.db.insert(self.buffer.models_to_add)
-        self.db.delete(self.buffer.models_to_del)
-        self.buffer.flush()
-
-    def build_cache(self, doc_word_scores):
-        self.cache.build(doc_word_scores)
-
-
-class IndexBuffer(object):
-
-    def __init__(self, models_to_add=[], models_to_del=[]):
-        self.models_to_add = docs_to_add
-        self.models_to_del = models_to_del
-
-    def flush():
-        self.models_to_add = []
-        self.models_to_del = []
-
-    def add(models):
-        self.models_to_add.extend(models)
-
-    def delete(models):
-        self.models_to_del.extend(models)
+    def reader(self):
+        return self.reader
 
 
 class IndexReader(object):
@@ -128,17 +76,72 @@ class IndexReader(object):
         self.doc_word_scores = self.cache.to_dict()
 
     def search(words):
-        return {word : v for word, v in self.doc_word_scores if word in words}
+        return {word : self.doc_word_scores[word] for word in words if word in self.doc_word_scores}
+
+class IndexWriter(object):
+
+    def __init__(self, db, cache):
+        self.buffer = IndexBuffer()
+        self.db = db
+        self.cache =cache
+
+    def add(self, text, doc_id):
+        # Convert text to dictionary of words mapping to their term frequency
+        wf = word_freq(clean_text(text))
+
+        # Get doc length by summing all term frequencies
+        doc_length = reduce(lambda x, y: x + y, wf.values())
+
+        self.buffer.add(create_document_words(tf, doc_id))
+        self.buffer.add([Document(doc_id, doc_length)])
+
+    def add_bulk(self, documents):
+        for text, document_id in documents:
+            self.add(text, document_id)
+
+    def delete(self, document_id):
+        doc_to_del = self.db.select_document(document_id)
+        doc_words_to_del = self.db.select_document_word(document_id)
+
+        self.buffer.delete(doc_to_del)
+        self.buffer.delete(doc_words_to_del)
+
+    def delete_bulk(self, document_ids):
+        for document_id in document_ids:
+            self.delete(document_id)
+
+    def commit(self):
+        # Flush buffer into the database
+        models_to_add, models_to_del = self.buffer.flush()
+        self.db.insert(models_to_add)
+        self.db.delete(models_to_del)
+
+    def build_cache(self, doc_word_scores):
+        self.cache.build(doc_word_scores)
 
 
-'''
-Notes:
-3. Keep dictionary on run: need redis/memcache support for a web server
-        Allow user to enter redis/memcache url
+class IndexBuffer(object):
+    """Represents the Document and DocumentWord objects to be added or
+    deleted from the database on commit.
+    """
 
-DB OPTIONS
-    1. Load data from Redis into Python dictionary
-    2. Always search from Redis
+    def __init__(self, models_to_add=[], models_to_del=[]):
+        self.models_to_add = models_to_add
+        self.models_to_del = models_to_del
 
-Make stopword list configurable
-'''
+    def flush():
+        """Removes and returns the content in the buffer.
+        """
+        content = (self.models_to_add, self.models_to_del)
+
+        self.models_to_add = []
+        self.models_to_del = []
+
+        return content
+
+    def add(models):
+        self.models_to_add.extend(models)
+
+    def delete(models):
+        self.models_to_del.extend(models)
+

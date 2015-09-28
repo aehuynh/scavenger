@@ -3,18 +3,28 @@ from sqlalchemy import create_engine
 
 from models import Document, DocumentWord
 
-# TODO: catch IO exceptions
+FILE_PATH='/ScavengerIndex.db'
+
+def create_index_store(file_path, url):
+
+    params = {}
+    if file_path is not None:
+        return IndexStore(file_path, url)
+    else:
+        return IndexStore(FILE_PATH, url)
+
 class IndexStore(object):
 
     def __init__(self, file_path, url=None):
+        # file_path is not needed if url is set
         if url is None:
             self.url = 'sqlite://' + file_path
         else:
             self.url = url
-        self.session = session()
+        self.session = self.session()
 
-    def session():
-        enginee = create_engine(url)
+    def session(self):
+        enginee = create_engine(selfurl)
         session = sessionmaker()
         session.configure(bind=engine)
         Base.metadata.create_all(engine)
@@ -40,5 +50,7 @@ class IndexStore(object):
         self.session.commit()
 
     def delete_all(self):
+        """Delete all Documents and DocumentWords.
+        """
         self.delete(self.select_all(Document))
         self.delete(self.select_all(DocumentWord))
