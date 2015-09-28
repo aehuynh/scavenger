@@ -5,7 +5,7 @@ from nltk import word_tokenize, PorterStemmer
 
 _stemmer = PorterStemmer()
 
-def term_freq(text):
+def word_freq(text):
     d = defultdict(int)
     for word in word_tokenize(text):
         d[word] += 1
