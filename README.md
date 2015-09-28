@@ -15,4 +15,4 @@ Scavenger is a search library similar to Lucene. It focuses on full text search 
 
 <a name="use-case" \>
 ###  Use Case
-Scavenger is best used for full text search in read heavy situations with small document collections. SQLite and Redis alone do not scale that well with large data sets and multiple nodes.
+Scavenger is best used for full text search in read heavy situations with small document collections. It precalculates the scores for every document word on commit and when loading the DB data onto Redis, making commits expensive but reading very fast.
