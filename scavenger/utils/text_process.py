@@ -2,11 +2,12 @@ from nltk.corpus import stopwords
 import string
 from nltk.tag import pos_tag
 from nltk import word_tokenize, PorterStemmer
+from collections import defaultdict
 
 _stemmer = PorterStemmer()
 
 def word_freq(text):
-    d = defultdict(int)
+    d = defaultdict(int)
     for word in word_tokenize(text):
         d[word] += 1
 

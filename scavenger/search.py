@@ -1,6 +1,7 @@
-from text_process import clean_text
+from utils.text_process import clean_text
 from nltk import word_tokenize
 
+from collections import defaultdict
 class Searcher(object):
 
     def __init__(self, index_reader):
@@ -18,13 +19,13 @@ class Searcher(object):
 
         doc_scores_sum = defaultdict(float)
 
-        for word, doc_scores in results:
-            for doc_id, score in doc_scores:
+        for word, doc_scores in results.items():
+            for doc_id, score in doc_scores.items():
                 doc_scores_sum[doc_id] += score
 
         # Sort all the doc_ids by the score descending
         sorted_doc_ids = sorted(doc_scores_sum, key=doc_scores_sum.get,
                                 reverse=True)
 
-        return [{"document_id" : doc_id, "score" : doc_scores_sum[k]}
+        return [{"document_id" : doc_id, "score" : doc_scores_sum[doc_id]}
                     for doc_id in sorted_doc_ids]

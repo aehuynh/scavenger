@@ -1,7 +1,12 @@
 from sqlalchemy.orm import relationship,sessionmaker
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 
 from models import Document, DocumentWord
+
+Base = declarative_base()
+
+#basedir = os.path.abspath(os.path.dirname(__file__))
 
 FILE_PATH='/ScavengerIndex.db'
 
@@ -24,27 +29,27 @@ class IndexStore(object):
         self.session = self.session()
 
     def session(self):
-        enginee = create_engine(selfurl)
+        engine = create_engine(self.url)
         session = sessionmaker()
         session.configure(bind=engine)
         Base.metadata.create_all(engine)
         return session()
 
-    def select_all(model_type):
-        return self.session.query(model_type)
+    def select_all(self, model_type):
+        return self.session.query(model_type).all()
 
-    def select_document(doc_id):
-        return self.session.query.(Document).filter(Document.id==doc_id)
+    def select_document(self, doc_id):
+        return self.session.query(Document).filter(Document.id==doc_id)
 
-    def select_document_word(doc_id):
-        return self.session.query.(DocumentWord).filter(DocumentWord.document_id==doc_id)
+    def select_document_word(self, doc_id):
+        return self.session.query(DocumentWord).filter(DocumentWord.document_id==doc_id)
 
-    def insert(models):
+    def insert(self, models):
         for model in models:
             self.session.add(model)
         self.session.commit()
 
-    def delete(models):
+    def delete(self, models):
         for model in models:
             self.session.delete(model)
         self.session.commit()

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Integer, Column, String
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -18,13 +18,13 @@ class DocumentWord(Base):
     id = Column(Integer, primary_key=True)
     word = Column(String, nullable=False)
     count = Column(Integer, nullable=False)
-    document_id = Column(Integer, ForeighKey('documents.id'))
+    document_id = Column(Integer, ForeignKey('documents.id'))
 
-def create_document_words(self, word_counts, doc_id):
+def create_document_words(word_counts, doc_id):
     """Creates a list of DocumentWords.
 
     :param word_counts: dictionary mapping words to number of times they
                         appear in the Document with doc_id
     """
-    return [DocumentWord(word=word, id=doc_id, count=count, document_id=doc_id)
-            for word, count in word_counts]
+    return [DocumentWord(word=word, count=count, document_id=doc_id)
+            for word, count in word_counts.items()]

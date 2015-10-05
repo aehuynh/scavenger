@@ -1,3 +1,5 @@
+from math import log
+
 class Scorer(object):
 
     def __init__(self, doc_count, doc_freqs, doc_lengths, avgdl):
@@ -10,6 +12,7 @@ class Scorer(object):
         raise NotImplementedError
 
     def tf(self, doc_word):
+        # Term frequency in normalized by the total document word count
         return doc_word.count / self.doc_lengths[doc_word.document_id]
 
     def idf(self, doc_word):
@@ -27,12 +30,12 @@ class BM25(Scorer):
     def score(self, doc_word):
         B = self.b
         K = self.k
-        tf = tf(doc_word)
-        idf = self.idf(doc_word)
+        TF = self.tf(doc_word)
+        IDF = self.idf(doc_word)
         doc_length = self.doc_lengths[doc_word.document_id]
         avgdl = self.avgdl
 
-        return idf * tf * (K+1) / (tf + K * (1 - B  + B * doc_length / avgdl))
+        return IDF * TF * (K+1) / (TF + K * (1 - B  + B * doc_length / avgdl))
 
 class TF_IDF(Scorer):
 
@@ -40,8 +43,7 @@ class TF_IDF(Scorer):
         super().__init__(**kwargs)
 
     def score(self, doc_word):
-        # Term frequency in proportion to the total document word count
-        tf = tf(doc_word)
-        idf = self.idf(doc_word)
+        TF = self.tf(doc_word)
+        IDF = self.idf(doc_word)
 
-        return tf * idf
+        return TF * IDF
