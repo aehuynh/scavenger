@@ -1,4 +1,4 @@
-import redis
+from redis import StrictRedis
 
 DOCUMENT_WORD_SCORE_NAME =  "doc_word_scores:"
 HOST = 'localhost'
@@ -21,7 +21,7 @@ def create_index_cache(host, port):
 class IndexCache(object):
 
     def __init__(self, host, port):
-        self.client = redis.StrictRedis(host=host, port=port, db=0)
+        self.client = StrictRedis(host=host, port=port, db=0)
 
 
     def build(self, doc_word_scores):
@@ -34,7 +34,7 @@ class IndexCache(object):
         """
         self.reset()
 
-        for word, doc_id_score in doc_word_scores:
+        for word, doc_id_score in doc_word_scores.items():
             # Add table name to word
             word_key = DOCUMENT_WORD_SCORE_NAME + word
             self.client.hmset(word_key, doc_id_score)
