@@ -1,0 +1,3 @@
+nltk == 3.0.5.egg
+redis == 2.10.3.egg
+SQLAlchemy == 1.0.8.egg
