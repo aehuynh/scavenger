@@ -25,7 +25,7 @@ class Index(object):
         return self.searcher.search(query)
 
     def commit(self):
-        self.writer.commit()
+        self.writer.db.commit()
         self.load_from_db()
 
     def load_from_db(self):
@@ -84,7 +84,6 @@ class IndexReader(object):
 class IndexWriter(object):
 
     def __init__(self, db, cache):
-        self.buffer = IndexBuffer()
         self.db = db
         self.cache =cache
 
@@ -95,8 +94,8 @@ class IndexWriter(object):
         # Get doc length by summing all term frequencies
         doc_length = reduce(lambda x, y: x + y, wf.values())
 
-        self.buffer.add(create_document_words(wf, doc_id))
-        self.buffer.add([Document(id=doc_id, length=doc_length)])
+        self.db.insert(create_document_words(wf, doc_id))
+        self.db.insert([Document(id=doc_id, length=doc_length)])
 
     def add_bulk(self, documents):
         for text, document_id in documents:
@@ -106,45 +105,12 @@ class IndexWriter(object):
         doc_to_del = self.db.select_document(document_id)
         doc_words_to_del = self.db.select_document_word(document_id)
 
-        self.buffer.delete(doc_to_del)
-        self.buffer.delete(doc_words_to_del)
+        self.db.delete([doc_to_del])
+        self.db.delete(doc_words_to_del)
 
     def delete_bulk(self, document_ids):
         for document_id in document_ids:
             self.delete(document_id)
 
-    def commit(self):
-        # Flush buffer into the database
-        models_to_add, models_to_del = self.buffer.flush()
-        self.db.insert(models_to_add)
-        self.db.delete(models_to_del)
-
     def build_cache(self, doc_word_scores):
         self.cache.build(doc_word_scores)
-
-
-class IndexBuffer(object):
-    """Represents the Document and DocumentWord objects to be added or
-    deleted from the database on commit.
-    """
-
-    def __init__(self, models_to_add=[], models_to_del=[]):
-        self.models_to_add = models_to_add
-        self.models_to_del = models_to_del
-
-    def flush(self):
-        """Removes and returns the content in the buffer.
-        """
-        content = (self.models_to_add, self.models_to_del)
-
-        self.models_to_add = []
-        self.models_to_del = []
-
-        return content
-
-    def add(self, models):
-        self.models_to_add.extend(models)
-
-    def delete(self, models):
-        self.models_to_del.extend(models)
-

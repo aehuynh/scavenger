@@ -47,15 +47,16 @@ class IndexStore(object):
     def insert(self, models):
         for model in models:
             self.session.add(model)
-        self.session.commit()
 
     def delete(self, models):
         for model in models:
             self.session.delete(model)
-        self.session.commit()
 
     def delete_all(self):
         """Delete all Documents and DocumentWords.
         """
         self.delete(self.select_all(Document))
         self.delete(self.select_all(DocumentWord))
+
+    def commit(self):
+        self.session.commit()
